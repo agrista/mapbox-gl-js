@@ -954,7 +954,7 @@ class Style extends Evented {
 
     _updatePlacement(transform: Transform, showCollisionBoxes: boolean, fadeDuration: number) {
         let symbolBucketsChanged = false;
-        let placementChanged = false;
+        let placementCommitted = false;
 
         const layerTiles = {};
 
@@ -990,11 +990,10 @@ class Style extends Evented {
 
             if (this.pauseablePlacement.isDone()) {
                 const placement = this.pauseablePlacement.placement;
-                placementChanged = placement.commit(this.placement, browser.now());
-                if (!this.placement || placementChanged || symbolBucketsChanged) {
-                    this.placement = placement;
-                    this.collisionIndex = this.placement.collisionIndex;
-                }
+                placement.commit(this.placement, browser.now());
+                placementCommitted = true;
+                this.placement = placement;
+                this.collisionIndex = this.placement.collisionIndex;
                 this.placement.setRecent(browser.now(), placement.stale);
             }
 
@@ -1009,7 +1008,7 @@ class Style extends Evented {
             this.placement.setStale();
         }
 
-        if (placementChanged || symbolBucketsChanged) {
+        if (placementCommitted || symbolBucketsChanged) {
             for (const layerID of this._order) {
                 const styleLayer = this._layers[layerID];
                 if (styleLayer.type !== 'symbol') continue;

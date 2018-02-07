@@ -65,6 +65,7 @@ class Placement {
     placements: { [string | number]: JointPlacement };
     opacities: { [string | number]: JointOpacityState };
     commitTime: number;
+    lastPlacementChangeTime: number;
     stale: boolean;
     fadeDuration: number;
 
@@ -204,11 +205,10 @@ class Placement {
         bucket.justReloaded = false;
     }
 
-    commit(prevPlacement: ?Placement, now: number) {
-        this.commitTime = now;
-
+    commit(prevPlacement: ?Placement, now: number): void {
         let placementChanged = false;
 
+        this.commitTime = now;
         const increment = (prevPlacement && this.fadeDuration !== 0) ?
             (this.commitTime - prevPlacement.commitTime) / this.fadeDuration :
             1;
@@ -242,7 +242,15 @@ class Placement {
             }
         }
 
-        return placementChanged;
+        // this.lastPlacementChangeTime is the time of the last commit() that
+        // resulted in a placement change -- in other words, the start time of
+        // the last symbol fade animation
+        assert(!prevPlacement || typeof prevPlacement.lastPlacementChangeTime === 'number');
+        if (placementChanged) {
+            this.lastPlacementChangeTime = now;
+        } else if (typeof this.lastPlacementChangeTime !== 'number') {
+            this.lastPlacementChangeTime = prevPlacement ? prevPlacement.lastPlacementChangeTime : now;
+        }
     }
 
     updateLayerOpacities(styleLayer: StyleLayer, tiles: Array<Tile>) {
@@ -362,7 +370,8 @@ class Placement {
     }
 
     hasTransitions(now: number) {
-        return this.symbolFadeChange(now) < 1 || this.stale;
+        return this.stale ||
+            now - this.lastPlacementChangeTime < this.fadeDuration;
     }
 
     stillRecent(now: number) {
