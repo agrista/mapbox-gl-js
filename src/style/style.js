@@ -985,16 +985,20 @@ class Style extends Evented {
             this._layerOrderChanged = false;
         }
 
-        if (!this.pauseablePlacement.isDone()) {
+        if (this.pauseablePlacement.isDone()) {
+            // the last placement finished running, but the next one hasn’t
+            // started yet because of the `stillRecent` check immediately
+            // above, so mark it stale to ensure that we request another
+            // render frame
+            this.placement.setStale();
+        } else {
             this.pauseablePlacement.continuePlacement(this._order, this._layers, layerTiles);
 
             if (this.pauseablePlacement.isDone()) {
-                const placement = this.pauseablePlacement.placement;
-                placement.commit(this.placement, browser.now());
-                placementCommitted = true;
-                this.placement = placement;
+                this.pauseablePlacement.placement.commit(this.placement, browser.now());
+                this.placement = this.pauseablePlacement.placement;
                 this.collisionIndex = this.placement.collisionIndex;
-                this.placement.setRecent(browser.now(), placement.stale);
+                placementCommitted = true;
             }
 
             if (symbolBucketsChanged) {
@@ -1003,9 +1007,6 @@ class Style extends Evented {
                 // placement is already stale while it is in progress
                 this.pauseablePlacement.placement.setStale();
             }
-
-        } else {
-            this.placement.setStale();
         }
 
         if (placementCommitted || symbolBucketsChanged) {

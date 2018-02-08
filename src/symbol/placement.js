@@ -61,7 +61,6 @@ class JointPlacement {
 class Placement {
     transform: Transform;
     collisionIndex: CollisionIndex;
-    recentUntil: number;
     placements: { [string | number]: JointPlacement };
     opacities: { [string | number]: JointOpacityState };
     commitTime: number;
@@ -72,7 +71,6 @@ class Placement {
     constructor(transform: Transform, fadeDuration: number) {
         this.transform = transform.clone();
         this.collisionIndex = new CollisionIndex(this.transform);
-        this.recentUntil = -Infinity;
         this.placements = {};
         this.opacities = {};
         this.stale = false;
@@ -375,12 +373,8 @@ class Placement {
     }
 
     stillRecent(now: number) {
-        return this.recentUntil > now;
-    }
-
-    setRecent(now: number, stale: boolean) {
-        this.stale = stale;
-        this.recentUntil = now + this.fadeDuration;
+        return this.commitTime === 'number' &&
+            this.commitTime + this.fadeDuration > now;
     }
 
     setStale() {
